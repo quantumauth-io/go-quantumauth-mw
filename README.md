@@ -1,5 +1,6 @@
 # go-quantumauth-mw
 ![Powered by QuantumAuth](https://img.shields.io/badge/Powered%20By-QuantumAuth-1a1a1a?style=for-the-badge&logo=dependabot)
+
 QuantumAuth middleware for Go HTTP servers.
 
 This package allows Go backends to **verify QuantumAuth requests** signed by the QuantumAuth Client (TPM + Post-Quantum signatures), using either:
