@@ -35,7 +35,7 @@ func TestMiddleware_Unauthorized_Aborts(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -68,7 +68,7 @@ func TestMiddleware_OK_AllowsAndSetsUserID(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -100,7 +100,7 @@ func TestQAMiddlewareWithRemote_OK(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -122,7 +122,7 @@ func TestQAMiddleware_Default_FastFailsWithBadRequest(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)

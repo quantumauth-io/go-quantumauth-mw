@@ -18,11 +18,11 @@ func okAuthHeaders(t *testing.T) map[string]string {
 	t.Helper()
 
 	// canonical itself can be anything; middleware just checks base64 is valid
-	canonical := "method=GET\npath=/private\nhost=api.example.com\n"
-	canonB64 := base64.StdEncoding.EncodeToString([]byte(canonical))
+	canonical := "methodGET\npath/private\nhostapi.example.com\n"
+	canonB64 := base64.RawStdEncoding.EncodeToString([]byte(canonical))
 
 	return map[string]string{
-		"Authorization":               `QuantumAuth sig_tpm="tpm" , sig_pq="pq"`,
+		"Authorization":               `QuantumAuth sig_tpm="tpm", sig_pq="pq"`,
 		"X-QuantumAuth-Canonical-B64": canonB64,
 	}
 }
@@ -85,7 +85,7 @@ func TestMiddleware_InvalidAuthorization_400(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", "Bearer nope")
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 	rr := httptest.NewRecorder()
 
 	h.ServeHTTP(rr, req)
@@ -222,7 +222,7 @@ func TestQaMiddlewareWithRemote_OK(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -257,7 +257,7 @@ func TestWithPathFunc_IsApplied(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/original", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -303,7 +303,7 @@ func TestWithUnauthorizedHandler_IsCalled(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

@@ -29,7 +29,7 @@ func TestMiddleware_Unauthorized_StopsChain(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 	rr := httptest.NewRecorder()
 
 	protected.ServeHTTP(rr, req)
@@ -56,7 +56,7 @@ func TestMiddleware_OK_SetsUserIDInContext(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 	rr := httptest.NewRecorder()
 
 	protected.ServeHTTP(rr, req)

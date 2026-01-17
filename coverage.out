@@ -1,4 +1,6 @@
 mode: set
+github.com/quantumauth-io/go-quantumauth-mw/chi/qa_middleware.go:14.97,16.2 1 1
+github.com/quantumauth-io/go-quantumauth-mw/chi/qa_middleware.go:18.49,20.2 1 1
 github.com/quantumauth-io/go-quantumauth-mw/header_parse.go:18.74,20.38 2 1
 github.com/quantumauth-io/go-quantumauth-mw/header_parse.go:20.38,22.3 1 1
 github.com/quantumauth-io/go-quantumauth-mw/header_parse.go:24.2,25.16 2 1
@@ -140,8 +142,6 @@ github.com/quantumauth-io/go-quantumauth-mw/remote_verifier.go:99.3,99.69 1 1
 github.com/quantumauth-io/go-quantumauth-mw/remote_verifier.go:101.31,102.62 1 1
 github.com/quantumauth-io/go-quantumauth-mw/remote_verifier.go:104.29,105.80 1 1
 github.com/quantumauth-io/go-quantumauth-mw/remote_verifier.go:107.10,109.104 1 0
-github.com/quantumauth-io/go-quantumauth-mw/chi/qa_middleware.go:14.97,16.2 1 1
-github.com/quantumauth-io/go-quantumauth-mw/chi/qa_middleware.go:18.49,20.2 1 1
 github.com/quantumauth-io/go-quantumauth-mw/gin/qa_middleware.go:11.60,13.2 1 1
 github.com/quantumauth-io/go-quantumauth-mw/gin/qa_middleware.go:16.86,19.2 2 1
 github.com/quantumauth-io/go-quantumauth-mw/gin/qa_middleware.go:21.79,23.30 2 1
