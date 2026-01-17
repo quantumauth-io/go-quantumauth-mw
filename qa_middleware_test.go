@@ -277,7 +277,7 @@ func TestQaMiddleware_Default_FastFailsWithBadRequest(t *testing.T) {
 	// Provide headers so we pass "missing headers" check,
 	// but still trigger fast-fail (BadRequest) before any remote call.
 	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
