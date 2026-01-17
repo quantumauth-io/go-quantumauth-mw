@@ -157,7 +157,7 @@ func Middleware(v Verifier, opts ...Option) func(next http.Handler) http.Handler
 			}
 
 			// 3) Fast-fail: canonical must be valid base64
-			if _, err := base64.StdEncoding.DecodeString(
+			if _, err := base64.RawStdEncoding.DecodeString(
 				qaHeaders["X-QuantumAuth-Canonical-B64"],
 			); err != nil {
 				o.OnBadRequest(w, r, fmt.Errorf("%w: invalid canonical base64", ErrBadRequest))
