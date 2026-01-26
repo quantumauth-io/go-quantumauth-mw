@@ -2,10 +2,11 @@ package qaauthmw
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/quantumauth-io/go-quantumauth-mw/headers"
 )
 
 type verifierFunc func(ctx context.Context, in VerifyInput) (*VerifyResult, error)
@@ -14,17 +15,19 @@ func (f verifierFunc) Verify(ctx context.Context, in VerifyInput) (*VerifyResult
 	return f(ctx, in)
 }
 
-func okAuthHeaders(t *testing.T) map[string]string {
-	t.Helper()
+// V2 requires *all* these headers to be present, otherwise extractQAHeadersV2() returns nil -> 401 (RequireAuth=true).
+func setQAHeadersV2(req *http.Request) {
+	req.Header.Set(string(headers.HeaderAuthorization), `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
 
-	// canonical itself can be anything; middleware just checks base64 is valid
-	canonical := "methodGET\npath/private\nhostapi.example.com\n"
-	canonB64 := base64.RawStdEncoding.EncodeToString([]byte(canonical))
+	req.Header.Set(string(headers.HeaderQAAppID), "app-1")
+	req.Header.Set(string(headers.HeaderQAAudience), "api.example.com")
+	req.Header.Set(string(headers.HeaderQATimestamp), "1700000000")
+	req.Header.Set(string(headers.HeaderQAChallengeID), "challenge-1")
+	req.Header.Set(string(headers.HeaderQAUserID), "user-1")
+	req.Header.Set(string(headers.HeaderQADeviceID), "device-1")
 
-	return map[string]string{
-		"Authorization":               `QuantumAuth sig_tpm="tpm", sig_pq="pq"`,
-		"X-QuantumAuth-Canonical-B64": canonB64,
-	}
+	// Optional (keep if you want to assert versioning later)
+	req.Header.Set(string(headers.HeaderQAVersion), "1")
 }
 
 func TestMiddleware_RequireAuth_MissingHeaders_401(t *testing.T) {
@@ -84,34 +87,10 @@ func TestMiddleware_InvalidAuthorization_400(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", "Bearer nope")
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
+	req.Header.Set(string(headers.HeaderAuthorization), "Bearer nope") // invalid shape -> ParseAuthorizationQuantumAuth fails
+
 	rr := httptest.NewRecorder()
-
-	h.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rr.Code)
-	}
-}
-
-func TestMiddleware_InvalidCanonicalBase64_400(t *testing.T) {
-	v := verifierFunc(func(ctx context.Context, in VerifyInput) (*VerifyResult, error) {
-		t.Fatalf("verifier should not be called on invalid canonical base64")
-		return nil, nil
-	})
-
-	mw := Middleware(v)
-
-	h := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatalf("handler should not be called on invalid canonical base64")
-	}))
-
-	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", "not-base64!!")
-	rr := httptest.NewRecorder()
-
 	h.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
@@ -131,9 +110,7 @@ func TestMiddleware_VerifierUnauthorized_401(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	for k, v := range okAuthHeaders(t) {
-		req.Header.Set(k, v)
-	}
+	setQAHeadersV2(req)
 	rr := httptest.NewRecorder()
 
 	h.ServeHTTP(rr, req)
@@ -159,46 +136,13 @@ func TestMiddleware_VerifierOK_SetsUserIDInContext(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	for k, v := range okAuthHeaders(t) {
-		req.Header.Set(k, v)
-	}
+	setQAHeadersV2(req)
 	rr := httptest.NewRecorder()
 
 	h.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
-	}
-}
-
-func TestMiddleware_ForwardsHostToVerifier(t *testing.T) {
-	var gotHost string
-
-	v := verifierFunc(func(ctx context.Context, in VerifyInput) (*VerifyResult, error) {
-		gotHost = in.Headers["Host"]
-		return &VerifyResult{Authenticated: true, UserID: "u"}, nil
-	})
-
-	// Default HostPolicy uses r.Host (forwarded headers not trusted).
-	mw := Middleware(v)
-
-	h := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	for k, v := range okAuthHeaders(t) {
-		req.Header.Set(k, v)
-	}
-	rr := httptest.NewRecorder()
-
-	h.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
-	}
-	if gotHost != "api.example.com" {
-		t.Fatalf("expected Host forwarded as api.example.com, got %q", gotHost)
 	}
 }
 
@@ -221,8 +165,7 @@ func TestQaMiddlewareWithRemote_OK(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -256,8 +199,7 @@ func TestWithPathFunc_IsApplied(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/original", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -268,16 +210,15 @@ func TestWithPathFunc_IsApplied(t *testing.T) {
 }
 
 func TestQaMiddleware_Default_FastFailsWithBadRequest(t *testing.T) {
+	// Default middleware uses remote verifier; we want to fail before any remote call.
+	// To do that, make headers pass extraction, but make Authorization invalid.
 	h := QAMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("handler should not be reached")
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-
-	// Provide headers so we pass "missing headers" check,
-	// but still trigger fast-fail (BadRequest) before any remote call.
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
+	req.Header.Set(string(headers.HeaderAuthorization), "Bearer nope") // triggers fast-fail BadRequest
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -302,8 +243,7 @@ func TestWithUnauthorizedHandler_IsCalled(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -332,8 +272,8 @@ func TestWithBadRequestHandler_IsCalled(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", "Bearer nope")
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.StdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
+	req.Header.Set(string(headers.HeaderAuthorization), "Bearer nope") // invalid -> bad request
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

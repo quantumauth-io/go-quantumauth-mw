@@ -2,13 +2,13 @@ package qagin
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	qaauthmw "github.com/quantumauth-io/go-quantumauth-mw"
+	"github.com/quantumauth-io/go-quantumauth-mw/headers"
 )
 
 type verifierFunc func(ctx context.Context, in qaauthmw.VerifyInput) (*qaauthmw.VerifyResult, error)
@@ -34,8 +34,7 @@ func TestMiddleware_Unauthorized_Aborts(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -67,8 +66,7 @@ func TestMiddleware_OK_AllowsAndSetsUserID(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -99,8 +97,7 @@ func TestQAMiddlewareWithRemote_OK(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -121,8 +118,8 @@ func TestQAMiddleware_Default_FastFailsWithBadRequest(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/private", nil)
-	req.Header.Set("Authorization", `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
-	req.Header.Set("X-QuantumAuth-Canonical-B64", base64.RawStdEncoding.EncodeToString([]byte("x")))
+	setQAHeadersV2(req)
+	req.Header.Set(string(headers.HeaderAuthorization), `QuantumAuth garbage="nope"`)
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -130,4 +127,16 @@ func TestQAMiddleware_Default_FastFailsWithBadRequest(t *testing.T) {
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rr.Code)
 	}
+}
+
+func setQAHeadersV2(req *http.Request) {
+	req.Header.Set(string(headers.HeaderAuthorization), `QuantumAuth sig_tpm="tpm", sig_pq="pq"`)
+	req.Header.Set(string(headers.HeaderQAAppID), "fa7095f1-8a2a-4d5b-a4d3-eb04ead52632")
+	req.Header.Set(string(headers.HeaderQAAudience), "api.example.com")
+	req.Header.Set(string(headers.HeaderQATimestamp), "1700000000")
+	req.Header.Set(string(headers.HeaderQAChallengeID), "challenge-1")
+	req.Header.Set(string(headers.HeaderQAUserID), "user-1")
+	req.Header.Set(string(headers.HeaderQADeviceID), "device-1")
+
+	req.Header.Set(string(headers.HeaderQAVersion), "1")
 }
