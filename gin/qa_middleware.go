@@ -1,6 +1,7 @@
 package qagin
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,7 @@ func QAMiddlewareWithRemote(baseURL string, opts ...qaauthmw.Option) gin.Handler
 }
 
 func Middleware(v qaauthmw.Verifier, opts ...qaauthmw.Option) gin.HandlerFunc {
+	fmt.Printf("[QA] gin middleware verifier=%T\n", v)
 	mw := qaauthmw.Middleware(v, opts...)
 	return func(c *gin.Context) {
 
