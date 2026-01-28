@@ -160,6 +160,7 @@ func Middleware(v Verifier, opts ...Option) func(next http.Handler) http.Handler
 			}
 
 			res, err := v.Verify(r.Context(), in)
+			fmt.Printf("[QA] verify error type=%T err=%v\n", err, err)
 			if err != nil {
 				if errors.Is(err, ErrUnauthorized) {
 					o.OnUnauthorized(w, r)
